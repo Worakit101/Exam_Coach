@@ -6,6 +6,8 @@
   <title>Exam Coach — Smart Study</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="style.css">
+  <!-- AR/VR viewer -->
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-900">
 
@@ -14,7 +16,7 @@
   <!-- SIDEBAR -->
   <aside class="w-72 bg-blue-700 text-white p-6 flex flex-col">
     <div class="flex items-center gap-3 mb-6">
-      <img src="https://static.vecteezy.com/system/resources/previews/001/486/411/original/open-book-icon-free-vector.jpg" alt="logo" class="w-10 h-10">
+      <img src="https://static.vecteezy.com/system/resources/previews/001/486/411/original/open-book-icon-free-vector.jpg" alt="logo" class="w-10 h-10 rounded">
       <div>
         <h1 class="text-xl font-bold">Exam Coach</h1>
         <p class="text-sm opacity-80">Smart Study Assistant</p>
@@ -28,16 +30,18 @@
       <button class="side-btn" onclick="showPage('planner')">📖 Planner</button>
       <button class="side-btn" onclick="showPage('micro')">🧩 Micro-learning</button>
       <button class="side-btn" onclick="showPage('quiz')">🧠 Quiz Mode</button>
+      <button class="side-btn" onclick="showPage('tutor')">👩‍🏫 AI Tutor</button>
       <button class="side-btn" onclick="showPage('reminders')">⏰ Reminders</button>
       <button class="side-btn" onclick="showPage('focus')">🎯 Focus Mode</button>
+      <button class="side-btn" onclick="showPage('ar')">🧪 AR/VR Learning</button>
       <button class="side-btn" onclick="showPage('community')">💬 Community</button>
     </nav>
 
-    <div class="mt-auto">
+    <div class="mt-auto space-y-2">
       <div class="mb-3">
-        <button id="themeToggle" class="w-full py-2 rounded bg-white text-blue-700">🌙 Dark Mode</button>
+        <button id="themeToggle" class="w-full py-2 rounded bg-white text-blue-700">🌙 Toggle Dark</button>
       </div>
-      <div class="text-xs opacity-80">Points: <span id="pointsDisplay">0</span> • Badges: <span id="badgesDisplay">0</span></div>
+      <div class="text-xs opacity-90">Points: <span id="pointsDisplay">0</span>, Badges: <span id="badgesDisplay">0</span></div>
     </div>
   </aside>
 
@@ -47,22 +51,38 @@
     <!-- DASHBOARD -->
     <section id="dashboardPage">
       <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-bold">📊 ภาพรวม</h2>
-        <div>
+        <h2 class="text-2xl font-bold flex items-center gap-2">📊 ภาพรวม</h2>
+        <div class="flex gap-2">
           <button class="btn" onclick="exportCalendar()">🔽 Export calendar (.ics)</button>
+          <button class="btn-ghost" onclick="bulkGoogleLinks()">↗︎ Quick add to Google</button>
         </div>
       </div>
 
-      <!-- Progress -->
-      <div class="mb-6">
-        <label class="block text-sm mb-1">Overall progress</label>
-        <div class="w-full bg-gray-300 rounded-full h-6">
-          <div id="progressBar" class="h-6 rounded-full bg-red-500 text-white text-sm font-semibold text-center">0%</div>
+      <!-- Mood Tracker + Suggestion -->
+      <div class="grid md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white p-4 rounded shadow md:col-span-2">
+          <label class="block text-sm mb-1">Overall progress</label>
+          <div class="w-full bg-gray-300 rounded-full h-6">
+            <div id="progressBar" class="h-6 rounded-full bg-red-500 text-white text-sm font-semibold text-center">0%</div>
+          </div>
+          <div id="summaryCards" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4"></div>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-semibold">🧠 Mood & Suggestions</h3>
+            <button class="btn-ghost text-xs" onclick="clearMood()">ล้าง</button>
+          </div>
+          <select id="moodSelect" class="input mb-2">
+            <option value="">เลือกอารมณ์วันนี้</option>
+            <option value="sleepy">ง่วง😪</option>
+            <option value="tired">เหนื่อย😫️</option>
+            <option value="ok">โอเค👌️</option>
+            <option value="ready">พร้อมลุย🔥</option>
+          </select>
+          <button class="btn w-full mb-2" onclick="saveMoodAndSuggest()">บันทึก & แนะนำ</button>
+          <div id="moodSuggestion" class="text-sm text-gray-700"></div>
         </div>
       </div>
-
-      <!-- Summary cards -->
-      <div id="summaryCards" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"></div>
 
       <!-- Weekly plan -->
       <h3 class="text-lg font-semibold mb-2">📅 แผน 7 วันข้างหน้า</h3>
@@ -81,15 +101,15 @@
       <form id="examForm" class="space-y-3 bg-white p-4 rounded shadow">
         <input id="subject" type="text" placeholder="ชื่อวิชา" class="input" required>
         <input id="date" type="date" class="input" required>
-        <textarea id="content" placeholder="เนื้อหา (ถ้าไม่ใส่ ระบบจะใช้ AI-gen ตัวอย่าง)" class="input"></textarea>
-        <label>ความเข้มข้น
+        <textarea id="content" placeholder="เนื้อหา" class="input"></textarea>
+        <label class="block">ความเข้มข้น
           <select id="intensity" class="input">
             <option value="low">เบา</option>
             <option value="medium" selected>กลาง</option>
             <option value="high">เข้มข้น</option>
           </select>
         </label>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
           <button class="btn" type="submit">บันทึก</button>
           <button type="button" class="btn-ghost" onclick="fillSampleExam()">เติมตัวอย่าง</button>
         </div>
@@ -110,9 +130,9 @@
         <!-- Flashcards panel -->
         <div class="bg-white p-4 rounded shadow">
           <h3 class="font-semibold mb-2">Flashcards</h3>
-          <div class="mb-2">
-            <input id="fcSubject" placeholder="วิชา (เช่น คณิต)" class="input inline-block w-1/2">
-            <input id="fcTopic" placeholder="บท" class="input inline-block w-1/2">
+          <div class="mb-2 grid grid-cols-2 gap-2">
+            <input id="fcSubject" placeholder="วิชา (เช่น คณิต)" class="input">
+            <input id="fcTopic" placeholder="บท" class="input">
           </div>
           <div class="mb-2">
             <textarea id="fcQ" placeholder="คำถาม (หน้า)" class="input"></textarea>
@@ -143,7 +163,7 @@
     <section id="quizPage" class="hidden">
       <h2 class="text-2xl font-bold mb-4">🧠 Quiz Mode</h2>
       <div class="bg-white p-4 rounded shadow">
-        <div class="grid grid-cols-2 gap-2 mb-3">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
           <label>ระดับชั้น
             <select id="quizGrade" class="input"></select>
           </label>
@@ -165,6 +185,19 @@
       </div>
     </section>
 
+    <!-- AI TUTOR -->
+    <section id="tutorPage" class="hidden">
+      <h2 class="text-2xl font-bold mb-4">👩‍🏫 AI Tutor (Template)</h2>
+      <div class="bg-white p-4 rounded shadow">
+        <div class="mb-2 text-sm text-gray-600">พิมพ์โจทย์หรือหัวข้อให้สรุป/อธิบาย step-by-step</div>
+        <div class="flex gap-2 mb-3">
+          <input id="tutorInput" class="input flex-1" placeholder="เช่น สรุปหลักการอนุรักษ์พลังงาน, แก้สมการ 2x+3=11">
+          <button class="btn" onclick="runTutor()">ถาม</button>
+        </div>
+        <div id="tutorOutput" class="prose max-w-none"></div>
+      </div>
+    </section>
+
     <!-- REMINDERS -->
     <section id="reminders" class="hidden">
       <h2 class="text-2xl font-bold mb-4">⏰ Reminders</h2>
@@ -172,12 +205,18 @@
         <input id="remTitle" placeholder="หัวข้อเตือน" class="input" required>
         <input id="remDatetime" type="datetime-local" class="input" required>
         <input id="remMessage" placeholder="ข้อความเตือน" class="input">
-        <label>เสียงเตือน:
-          <input id="remVoice" placeholder="ข้อความเสียง (จะอ่านออกเสียง)" class="input">
-        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <label>เสียงเตือน (ข้อความจะถูกอ่านออกเสียง)
+            <input id="remVoice" placeholder="เช่น ถึงเวลาอ่านบท 1-2 แล้วนะ!" class="input">
+          </label>
+          <label>เลือกโทนเสียง
+            <select id="remVoiceSelect" class="input"></select>
+          </label>
+        </div>
         <div class="flex gap-2">
           <button class="btn" type="submit">ตั้งเตือน</button>
           <button class="btn-ghost" type="button" onclick="loadSampleReminders()">ตัวอย่าง</button>
+          <button class="btn-ghost" type="button" onclick="previewVoice()">🔊 ทดลองเสียง</button>
         </div>
       </form>
 
@@ -200,6 +239,20 @@
           <button class="btn-ghost" onclick="toggleFocusMode()">สลับ Focus Mode</button>
         </div>
         <div id="pomTimer" class="text-2xl font-bold"></div>
+      </div>
+    </section>
+
+    <!-- AR/VR -->
+    <section id="arPage" class="hidden">
+      <h2 class="text-2xl font-bold mb-4">🧪 AR/VR Learning (ทดลอง)</h2>
+      <div class="bg-white p-4 rounded shadow space-y-3">
+        <div class="text-sm text-gray-600">วางลิงก์ไฟล์ .glb/.gltf เพื่อหมุนดู 3D (เช่น โมเลกุล, เรขาคณิต)</div>
+        <div class="flex gap-2">
+          <input id="modelUrl" class="input flex-1" placeholder="https://.../model.glb">
+          <button class="btn" onclick="loadModel()">โหลด</button>
+        </div>
+        <model-viewer id="viewer" src="" alt="3D" camera-controls auto-rotate ar ar-modes="webxr scene-viewer quick-look" style="width:100%;height:360px;background:#f3f4f6;border-radius:.5rem;"></model-viewer>
+        <div class="text-xs text-gray-500">หมายเหตุ: บางไฟล์ต้องเปิดผ่าน HTTPS และอนุญาตเซ็นเซอร์เพื่อใช้ AR</div>
       </div>
     </section>
 
